@@ -9,7 +9,6 @@
             pygame.quit()
             sys.exit()
         elif counter[0] == 0 and len(counter) != 3:
-            flags.insert(0, 1)
             counter.append(0)
             self.sound_die.play()
             pygame.time.wait(2500)
