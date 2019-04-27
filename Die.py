@@ -1,3 +1,5 @@
+counter[0]
+
     def die(self, type):
         global inGame
         global counter
