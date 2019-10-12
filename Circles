@@ -1,0 +1,26 @@
+import turtle
+import random
+
+window = turtle.Screen()
+t = turtle.Pen()
+t.penup()
+window.bgcolor(0, 0, 0)
+t.speed(0)
+colors = ['red', 'green', 'blue', 'purple', 'pink', 'orange', 'yellow']
+
+
+def click(x, y):
+    cir = random.randint(1, 20)
+    t.setpos(x, y)
+    t.pendown()
+    for i in range(cir):
+        t.color(random.choices(colors))
+        t.circle(100)
+        angle = 360 // cir
+        t.right(angle)
+    t.penup()
+
+window.onclick(click)
+window.listen()
+window.onkeypress(window.resetscreen, "Q")
+turtle.done()
