@@ -71,15 +71,16 @@ class Meteor(pygame.sprite.Sprite):
         self.image.fill(RED)
         self.rect = self.image.get_rect()
         self.rect.centerx = random.randint(20, 460)
-        self.rect.top = random.randint(5, 20)
-        self.rect.y += random.randint(1, 25)
+        self.rect.top = random.randint(-100, 0)
+        self.rect.y = random.randint(1, 15)
+        self.speedy = random.randint(1, 15)
 
     def update(self):
-        self.rect.y += random.randint(1, 25)
+        self.rect.y += self.speedy
         if self.rect.y > HEIGHT:
-            self.rect.top = 5
             self.rect.centerx = random.randint(20, 460)
-            self.rect.top = random.randint(5, 20)
+            self.rect.top = random.randint(-100, 0)
+        print(self.speedy)
 
 
 
