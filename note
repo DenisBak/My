@@ -1,0 +1,267 @@
+Как заменить прямоугольники на картинки
+В начале файла игры добавить переменную для хранения пути к картинкам.
+import pygame
+import random
+from os import path
+
+img_dir = path.join(path.dirname(__file__), 'img')
+
+В начале основного кода программы, после объявления всех классов создать переменные, которые будут указывать, какие картинки мы будем использовать у себя в игре.
+# Загружаем графику
+# Картинка для фона
+background = pygame.image.load(path.join(img_dir, "starfield.png")).convert()
+background_rect = background.get_rect()
+# Картинка для игрока
+player_img = pygame.image.load(path.join(img_dir, "playerShip1_orange.png")).convert()
+# Картинка для метеорита
+meteor_img = pygame.image.load(path.join(img_dir, "meteorBrown_med1.png")).convert()
+# Картинка для пули
+bullet_img = pygame.image.load(path.join(img_dir, "laserRed16.png")).convert()
+
+all_sprites = pygame.sprite.Group()
+mobs = pygame.sprite.Group()
+bullets = pygame.sprite.Group()
+
+Измените в объявлениях классов описание их внешнего вида
+class Player(pygame.sprite.Sprite):
+    def __init__(self):
+        pygame.sprite.Sprite.__init__(self)
+        self.image = pygame.transform.scale(player_img, (50, 38))
+        self.image.set_colorkey(BLACK)
+        self.rect = self.image.get_rect()
+        self.rect.centerx = WIDTH / 2
+
+class Mob(pygame.sprite.Sprite):
+    def __init__(self):
+        pygame.sprite.Sprite.__init__(self)
+        self.image = meteor_img
+        self.image.set_colorkey(BLACK)
+        self.rect = self.image.get_rect()
+
+class Bullet(pygame.sprite.Sprite):
+    def __init__(self, x, y):
+        pygame.sprite.Sprite.__init__(self)
+        self.image = bullet_img
+        self.image.set_colorkey(BLACK)
+        self.rect = self.image.get_rect()
+
+
+В конце основного кода программы заменить заливку экрана на отрисовку картинки
+
+screen.fill(BLACK)
+screen.blit(background, background_rect)
+all_sprites.draw(screen)
+pygame.display.flip()
+
+Поменяем способ определения столкнулся метеорит с кораблем или нет. 
+Слева картинка как у нас сравнивается положение метеорита и корабля относительно друг друга сейчас, справа – как мы хотим, чтобы сравнивалось. В чем вы видите разницу?
+ 
+Для изменения способа сравнения, добавим в наши классы игрока и метеорита еще одно свойство – радиус.
+class Player(pygame.sprite.Sprite):
+    def __init__(self):
+        pygame.sprite.Sprite.__init__(self)
+        self.image = pygame.transform.scale(player_img, (50, 38))
+        self.image.set_colorkey(BLACK)
+        self.rect = self.image.get_rect()
+        self.radius = 20
+        self.rect.centerx = WIDTH / 2
+	
+class Mob(pygame.sprite.Sprite):
+    def __init__(self):
+        pygame.sprite.Sprite.__init__(self)
+        self.image = meteor_img
+        self.image.set_colorkey(BLACK)
+        self.rect = self.image.get_rect()
+        	
+        self.rect.x = random.randrange(WIDTH - self.rect.width)
+
+В методе проверки столкновения метеорита и игрока добавить еще один параметр 
+hits = pygame.sprite.spritecollide(player1	, mobs, False, pygame.sprite.collide_circle)
+if hits:
+    running = False
+
+Сделаем наши метеориты вращающимися
+class Mob(pygame.sprite.Sprite):
+    def __init__(self):
+        pygame.sprite.Sprite.__init__(self)
+        self.image = meteor_img
+        self.image.set_colorkey(BLACK)
+        self.rect = self.image.get_rect()
+        self.radius = int(self.rect.width / 2)
+        self.rect.x = random.randrange(WIDTH - self.rect.width)
+        self.rect.y = random.randrange(-100, -40)
+        self.speedy = random.randrange(1, 8)
+        self.speedx = random.randrange(-3, 3)
+        self.rot = 0
+        self.rot_speed = random.randrange(-8,8)
+        #сколько времени прошло с начала игры
+        self.last_update = pygame.time.get_ticks()
+Добавим в класс с описанием метеорита еще один метод, rotate, который будет поворачивать картинку с метеоритом по часовой или против часовой стрелки, в зависимости от значения rot_speed.
+def rotate(self):
+    now = pygame.time.get_ticks()
+    if now - self.last_update > 50:
+        self.last_update = now
+        self.rot = (self.rot + self.rot_speed) % 360
+        new_image = pygame.transform.rotate(self.image_orig, self.rot)
+        old_center = self.rect.center
+        self.image = new_image
+        self.rect = self.image.get_rect()
+        self.rect.center = old_center
+И добавим в метод update вызов процедуры поворота метеорита rotate
+def update(self):
+    self.rotate()
+    self.rect.x += self.speedx
+    self.rect.y += self.speedy
+
+И чтобы сделать игру еще более интересной, сделаем так, чтобы метеориты были разные по размеру. Для этого доработаем код, написанный в шаге 1. Вместо одной картинки с метеоритом объявим список картинок.
+meteor_img = pygame.image.load(path.join(img_dir, "meteorBrown_med1.png")).convert()
+# Картинка для пули
+bullet_img = pygame.image.load(path.join(img_dir, "laserRed16.png")).convert()
+meteor_images = []
+meteor_list = ['meteorBrown_big1.png', 'meteorBrown_big2.png', 'meteorBrown_med1.png',
+               'meteorBrown_med3.png', 'meteorBrown_small1.png', 'meteorBrown_small2.png',
+               'meteorBrown_tiny1.png']
+for img in meteor_list:
+    meteor_images.append(pygame.image.load(path.join(img_dir, img)).convert())
+
+all_sprites = pygame.sprite.Group()
+mobs = pygame.sprite.Group()
+bullets = pygame.sprite.Group()
+ 
+В конструкторе класса Метеорит заменим назначение свойства image_orig с одной картинки на выбор случайной картинки из объявленного выше множества.
+class Meteor(pygame.sprite.Sprite):
+    def __init__(self):
+        pygame.sprite.Sprite.__init__(self)
+        self.image_orig = random.choice(meteor_images)
+        self.image_orig.set_colorkey(BLACK)
+        self.image = self.image_orig.copy()
+
+Добавим в нашу игру подсчет очков.
+Заведем переменную для подсчета очков.
+running = True
+score = 0
+while running:
+    # keep loop running at the right speed
+    clock.tick(FPS)
+    # Process input (events)
+    for event in pygame.event.get():
+
+Каждый раз, когда пуля, выпущенная кораблем, попадает в метеорит, увеличиваем количество накопленных очков. Чем меньше радиус метеорита, который мы сбили, тем больше очков мы зарабатываем.
+hits = pygame.sprite.groupcollide(mobs, bullets, True, True)
+for hit in hits:
+    score += 50 - hit.radius 
+    m = Mob()
+    all_sprites.add(m)
+    mobs.add(m)
+
+Добавим на игровой экран текст с количеством набранных баллов. Сначала опишем процедуру, которая выводит заданный текст.
+screen = pygame.display.set_mode((WIDTH, HEIGHT))
+pygame.display.set_caption("Shmup!")
+clock = pygame.time.Clock()
+font_name = pygame.font.match_font('arial')
+
+def draw_text(surf, text, size, x, y):
+    font = pygame.font.Font(font_name, size)
+    text_surface = font.render(text, True, WHITE)
+    text_rect = text_surface.get_rect()
+    text_rect.midtop = (x, y)
+    surf.blit(text_surface, text_rect)
+    
+class Player(pygame.sprite.Sprite):
+    def __init__(self):
+
+В конце основного кода программы добавим вызов процедуры вывода текста с количеством заработанных очков.
+screen.fill(BLACK)
+screen.blit(background, background_rect)
+all_sprites.draw(screen)
+draw_text(screen, str(score), 18, WIDTH/2, 10)
+# *after* drawing everything, flip the display
+pygame.display.flip()
+
+ Сделаем стартовый экран для игры
+Создадим процедуру отображения стартового экрана
+def draw_text(surf, text, size, x, y):
+    font = pygame.font.Font(font_name, size)
+    text_surface = font.render(text, True, WHITE)
+    text_rect = text_surface.get_rect()
+    text_rect.midtop = (x, y)
+    surf.blit(text_surface, text_rect)
+    
+def show_go_screen():
+    screen.blit(background, background_rect)
+    draw_text(screen, 'Shmup', 64, WIDTH / 2, HEIGHT / 4)
+    draw_text(screen, 'Стрелки - перемещение, пробел - выстрел', 22, WIDTH / 2, HEIGHT / 2)
+    draw_text(screen, 'Нажми любую клавишу, чтобы продолжить', 18, WIDTH / 2, HEIGHT * 3 / 4)
+    pygame.display.flip()
+    waiting = True
+    while waiting:
+        clock.tick(FPS)
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+            if event.type == pygame.KEYUP:
+                waiting = False
+
+class Player(pygame.sprite.Sprite):
+    def __init__(self):
+Изменим действия, происходящие при запуске игры. Создадим новые переменные, game_over – признак, что наш корабль был разрушен метеоритом и игра закончилась. В момент, когда game_over = True, нужно показать стартовый экран игры и переопределить переменную game_over. Создание групп игровых объектов также перенесем внутрь условия if game_over.
+# Game loop
+running = True
+game_over = True
+while running:
+    if game_over:
+        show_go_screen()
+        game_over = False
+        all_sprites = pygame.sprite.Group()
+        mobs = pygame.sprite.Group()
+        bullets = pygame.sprite.Group()
+        player = Player()
+        all_sprites.add(player)
+        for i in range(8):
+            m = Mob()
+            all_sprites.add(m)
+            mobs.add(m)
+        score = 0
+
+    # keep loop running at the right speed
+    clock.tick(FPS)
+    # Process input (events)
+    for event in pygame.event.get():
+        # check for closing window
+
+было:
+# Картинка для пули
+bullet_img = pygame.image.load(path.join(img_dir, "laserRed16.png")).convert()
+
+all_sprites = pygame.sprite.Group()
+mobs = pygame.sprite.Group()
+bullets = pygame.sprite.Group()
+player = Player()
+all_sprites.add(player)
+for i in range(8):
+    m = Mob()
+    all_sprites.add(m)
+    mobs.add(m)
+
+# Game loop
+running = True
+while running:
+    # keep loop running at the right speed
+    clock.tick(FPS)
+    # Process input (events)
+    for event in pygame.event.get():
+        # check for closing window
+        if event.type == pygame.QUIT:
+            running = False
+        elif event.type == pygame.KEYDOWN:
+
+Изменим действие, происходящее, когда метеорит попадает в корабль
+# check to see if a mob hit the player
+hits = pygame.sprite.spritecollide(player, mobs, False, pygame.sprite.collide_circle)
+if hits:
+    #running = False
+    game_over = True
+
+# Draw / render
+screen.fill(BLACK)
+
