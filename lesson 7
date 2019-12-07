@@ -1,0 +1,189 @@
+# подключаем библиотеку pygame
+import pygame
+from pygame.sprite import Sprite, Group
+import sys
+import random
+import time
+from os import path
+
+
+
+
+# создадим переменные, которые будут хранить значения параметро в отображения игры
+# размеры экрана: ширина = 480, высота = 600, частота обновления экрана = 60
+WIDTH = 480
+HEIGHT = 600
+FPS = 60
+
+# задаем шесть цветов - белый, черный, красный, зеленый, синий, желтый - посредством кортежей
+WHITE = (255, 255, 255)
+BLACK = (0, 0, 0)
+RED = (255, 0, 0)
+GREEN = (0, 255, 0)
+BLUE = (0, 0, 255)
+YELLOW = (255, 255, 0)
+
+# Инициализируем отображение игры
+pygame.init()
+pygame.mixer.init()
+
+
+# Задаем ширину и высоту игрового экрана
+WINDOW = pygame.display.set_mode((WIDTH, HEIGHT))
+
+img_dir = path.join(path.dirname(__file__), 'img')
+
+background = pygame.image.load(path.join(img_dir, 'starfield.png')).convert()
+background_rect = background.get_rect()
+player_img = pygame.image.load(path.join(img_dir, "playerShip1_orange.png")).convert()
+meteor_img = pygame.image.load(path.join(img_dir, "meteorBrown_med1.png")).convert()
+bullet_img = pygame.image.load(path.join(img_dir, "laserRed16.png")).convert()
+# Задаем подпись у экрана с игрой
+pygame.display.set_caption("Space shutle")
+
+# Создает объект, помогающих отслеживать игровое время
+clock = pygame.time.Clock()
+
+
+# опишем класс для Игрока, унаследовав его от Sprite
+class Player(pygame.sprite.Sprite):
+    # конструктор
+    def __init__(self):
+        # создаем объект родительского класса
+        pygame.sprite.Sprite.__init__(self)
+        # изображение Игрока будет в виде прямоугольника 50 на 40
+        self.image = pygame.transform.scale(player_img, (50, 38))
+        self.image.set_colorkey(BLACK)
+        # задаем, в каком месте экрана мы увидим этот прямоугольник
+        self.rect = self.image.get_rect()
+        self.radius = 20
+        self.rect.centerx = WIDTH / 2
+        self.rect.bottom = HEIGHT - 10
+        # он не движется
+        self.speedx = 0
+
+    # как наш Игрок реагирует на события, происходящие извне
+    def update(self):
+        # уточняем, что Игрок не движется
+        self.speedx = 0
+        # определяем, какую клавишу мы нажали и записываем это в переменную keystate
+        keystate = pygame.key.get_pressed()
+        # если мы жмем клавишу ВЛЕВО,то двигаемся влево (аналогия с декартовой СК)-ставим отрицательное значение скорости
+        if keystate[pygame.K_LEFT]:
+            self.rect.x -= 10
+            if self.rect.left < 0:
+                self.rect.left = 0
+        # если жмем ВПРАВО, то двигаемся вправо
+        if keystate[pygame.K_RIGHT]:
+            self.rect.x += 10
+            if self.rect.right > WIDTH:
+                self.rect.right = WIDTH
+        # передвинуть объект на speedx пикселей
+        self.speedx += 1
+
+
+class Meteor(pygame.sprite.Sprite):
+    def __init__(self):
+        pygame.sprite.Sprite.__init__(self)
+        self.image = meteor_img
+        self.image.set_colorkey(BLACK)
+        self.rect = self.image.get_rect()
+        self.radius = int(self.rect.width / 2)
+        self.rect.x = random.randrange(WIDTH - self.rect.width)
+        self.rect.y = random.randrange(-100, -40)
+        self.speedy = random.randrange(1, 8)
+        self.speedx = random.randrange(-3, 3)
+
+    def update(self):
+        self.rect.y += self.speedy
+        if self.rect.y > HEIGHT:
+            self.rect.centerx = random.randint(20, 460)
+            self.rect.top = random.randint(-150, -100)
+
+
+class Bullets(pygame.sprite.Sprite):
+    def __init__(self, x, y):
+        pygame.sprite.Sprite.__init__(self)
+        self.image = pygame.Surface((10, 30))
+        self.image = bullet_img
+        self.image.set_colorkey(BLACK)
+        self.rect = self.image.get_rect()
+        self.rect.x = x
+        self.rect.y = y
+        self.speedy = 10
+
+    def update(self):
+        self.rect.y -= self.speedy
+
+def lol():
+    global FLAG
+    WINDOW.fill(BLACK)
+    pygame.font.init()
+    myfont = pygame.font.SysFont('Comic Sans MS', 30)
+    textsurface = myfont.render('Press Enter to start', False, (0, 0, 0))
+    WINDOW.blit(textsurface, (50, 50))
+    waiting = True
+    while waiting:
+        for ev in pygame.event.get():
+            keystate = pygame.key.get_pressed()
+            if ev.type == pygame.QUIT:
+                waiting = False
+            if keystate[pygame.K_SPACE]:
+                waiting = False
+                FLAG = 1
+
+# тут пошла игра
+# сразу создадим группу, для хранения игровых объектов
+all_objects = pygame.sprite.Group()
+all_meteors = pygame.sprite.Group()
+all_bullets = pygame.sprite.Group()
+# создали игрока
+player = Player()
+# добавим нашего игрока в группу. Это как организуем комнату для игр и впустим туда персонажа
+all_objects.add(player)
+for i in range(8):
+    meteor = Meteor()
+    all_objects.add(meteor)
+    all_meteors.add(meteor)
+# Основной ход игры. Пока не нажали "Выход", играем
+
+FLAG = 0
+
+running = True
+while running:
+    if FLAG == 0:
+        lol()
+    hits = pygame.sprite.spritecollide(player, all_meteors, False, pygame.sprite.collide_circle)
+    if hits:
+        running = False
+    collides = pygame.sprite.groupcollide(all_meteors, all_bullets, True, True)
+    for collide in collides:
+        meteor = Meteor()
+        all_objects.add(meteor)
+        all_meteors.add(meteor)
+    # задаем частоту обновления экрана
+    clock.tick(FPS)
+    # Перебираем все события, которые отслеживаются в нашей игре.
+    # Например, нажатие на кнопку закрытия игры (QUIT) или движение мышкой (MOUSEMOTION)
+    for event in pygame.event.get():
+        keystate = pygame.key.get_pressed()
+        if keystate[pygame.K_SPACE]:
+            if not (keystate[pygame.K_LEFT] or keystate[pygame.K_RIGHT]):
+                bullets = Bullets(player.rect.centerx, player.rect.bottom)
+                all_objects.add(bullets)
+                all_bullets.add(bullets)
+        # Проверяем, не нажали ли мы кнопку выхода из игры
+        if event.type == pygame.QUIT:
+            running = False
+
+    all_objects.update()
+    # Закрашиваем игровой экран черным цветом
+    WINDOW.fill(BLACK)
+    WINDOW.blit(background, background_rect)
+    # Отрисовываем игровые объекты
+    all_objects.draw(WINDOW)
+    # Обновляем экран
+    pygame.display.flip()
+
+    # Закрываем игру
+pygame.quit()
